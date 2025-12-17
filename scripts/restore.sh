@@ -7,7 +7,7 @@ if [[ $# -ne 1 ]]; then
 fi
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-COMPOSE_FILE="$PROJECT_ROOT/compose/docker-compose.yml"
+COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_ROOT/compose/stack.yml}"
 BACKUP_FILE="$1"
 
 if [[ ! -f "$BACKUP_FILE" ]]; then

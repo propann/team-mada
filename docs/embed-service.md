@@ -1,26 +1,29 @@
 # Embed Service
 
 ## Rôle
-Point de terminaison pour générer ou servir des embeddings (placeholder HTTP minimal prêt à être remplacé par un service réel).
+Service HTTP statique simple pour exposer des embeddings ou des fichiers modèle via HTTP.
 
 ## Dépendances
-- Réseaux `koff_net` et `ingress_net`.
+- Aucun service interne ; réseaux `koff_net` + `ingress_net`.
 
 ## Ports
-- 8082 (HTTP) – bind 127.0.0.1 par défaut.
+- 8082 (HTTP) lié à 127.0.0.1.
 
 ## Volumes
-- Aucun par défaut.
+- Mono-instance : `./data/shared/embed-service` → `/srv/app` (read-only).
+- Multi-tenant : même volume partagé.
 
 ## Risques sécurité
-- Pas d'authentification ni de limitation de charge dans la version placeholder.
-- Embeddings peuvent contenir des données sensibles si vous les générez à partir de contenu privé.
+- Aucun mécanisme d’authentification intégré.
+- Si le volume est modifiable par d’autres services, risque de substitution de modèle.
 
 ## Configuration recommandée
-- Remplacer par votre implémentation (FastAPI/Go) avec auth et quotas.
-- Restreindre l'accès au réseau interne ou via reverse proxy authentifié.
+- Laisser `read_only: true` pour le conteneur.
+- Passer par le reverse proxy si exposition externe (TLS + auth).
+- Stocker les fichiers volumineux hors dépôt et documenter leur provenance/empreinte.
 
 ## Vérification rapide
 ```
-curl -fsS http://127.0.0.1:${EMBED_SERVICE_PORT:-8082}/
+docker compose -f compose/stack.yml ps embed-service
+curl -I http://127.0.0.1:${EMBED_SERVICE_PORT:-8082}/
 ```

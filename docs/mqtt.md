@@ -1,38 +1,42 @@
 # MQTT (Eclipse Mosquitto)
 
 ## Rôle
-Bus de messages léger pour connecter capteurs, workflows n8n et services internes.
+Broker MQTT partagé pour la messagerie temps réel inter-services/tenants.
 
 ## Dépendances
-- Fichiers de configuration dans `configs/mqtt/` (ACL, utilisateurs, TLS).
-- Réseau `backbone_net`.
+- Aucun service applicatif, nécessite les fichiers de configuration montés depuis `configs/mqtt/`.
 
 ## Ports
-- 1883 (MQTT sans TLS) – bind 127.0.0.1 par défaut.
-- 8883 (MQTT avec TLS) – bind 127.0.0.1 par défaut.
+- 1883 (TCP) : MQTT non chiffré (lié sur 127.0.0.1).
+- 8883 (TCP) : MQTT TLS (lié sur 127.0.0.1), activé si les certificats sont présents.
 
 ## Volumes
-- `mosquitto_data` → `/mosquitto/data`
-- `mosquitto_log` → `/mosquitto/log`
-- `./configs/mqtt/mosquitto.conf` → `/mosquitto/config/mosquitto.conf`
+- Mono-instance : `mosquitto_data` → `/mosquitto/data`, `mosquitto_log` → `/mosquitto/log`
+- Multi-tenant : `./data/shared/mqtt` pour data + `./data/shared/mqtt/config` pour config
+- Fichiers montés :
+  - `configs/mqtt/mosquitto.conf` → `/mosquitto/config/mosquitto.conf`
+  - `configs/mqtt/acl` → `/mosquitto/config/acl`
+  - `configs/mqtt/passwords` → `/mosquitto/config/passwords`
+  - `configs/mqtt/certs/*` → `/mosquitto/config/certs/`
 
 ## Risques sécurité
-- Comptes anonymes : désactiver `allow_anonymous` (déjà faux par défaut dans `.env.example`).
-- TLS nécessaire si exposition LAN/Internet.
-- ACL absentes → fuite de messages cross-tenant.
+- Accès anonyme si `MOSQUITTO_ALLOW_ANONYMOUS=true`.
+- Fuite inter-tenant en cas d’ACL permissives.
+- Certificats TLS absents ou mal protégés.
 
 ## Configuration recommandée
-- Générer les utilisateurs via `mosquitto_passwd` (voir commentaire dans `configs/mqtt/passwords`).
-- Créer des ACL par tenant (ex: `azoth/#`, `maximus/#`, `koff/#`).
-- Pour TLS : générer un CA local + certs serveur dans `configs/mqtt/certs/` (non fournis). Exemple :
+- Laisser `MOSQUITTO_ALLOW_ANONYMOUS=false` (défaut) et gérer les comptes via `mosquitto_passwd`.
+- Segmentation des topics par tenant dans `acl` (`tenant/#`).
+- Générer des certificats auto-signés ou Let’s Encrypt pour `configs/mqtt/certs` (ne pas committer). Exemple :
 ```
 mkdir -p configs/mqtt/certs
-openssl req -new -x509 -days 365 -nodes -out configs/mqtt/certs/ca.crt -keyout configs/mqtt/certs/ca.key
-openssl req -new -nodes -out configs/mqtt/certs/server.csr -keyout configs/mqtt/certs/server.key
-openssl x509 -req -in configs/mqtt/certs/server.csr -CA configs/mqtt/certs/ca.crt -CAkey configs/mqtt/certs/ca.key -CAcreateserial -out configs/mqtt/certs/server.crt -days 365
+openssl req -x509 -newkey rsa:4096 -keyout configs/mqtt/certs/server.key -out configs/mqtt/certs/server.crt -days 365 -nodes -subj "/CN=mqtt.local"
+openssl req -x509 -newkey rsa:4096 -keyout configs/mqtt/certs/ca.key -out configs/mqtt/certs/ca.crt -days 365 -nodes -subj "/CN=mqtt-ca"
 ```
+- Vérifier les permissions (root:root, 600) sur les clés privées.
 
 ## Vérification rapide
 ```
-docker compose exec mosquitto mosquitto_pub -t health -m ok
+docker compose -f compose/stack.yml ps mosquitto
+docker compose -f compose/stack.yml exec mosquitto mosquitto_sub -h localhost -p ${MOSQUITTO_PORT:-1883} -t health -C 1 -W 3
 ```

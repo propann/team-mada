@@ -1,26 +1,28 @@
 # Strudel
 
 ## Rôle
-Serveur de musique générative JavaScript pour expérimenter et diffuser des patterns audio.
+Environnement musical/génératif (front web) pour expérimentations audio.
 
 ## Dépendances
-- Réseau `maximus_net` et `ingress_net`.
+- Aucun service interne ; utilise `maximus_net` + `ingress_net` pour isoler le trafic.
 
 ## Ports
-- 7000 (HTTP) – bind 127.0.0.1 par défaut.
+- 7000 (HTTP) lié à 127.0.0.1 dans la stack par défaut ; 8080 dans la variante multi-tenant (`STRUDL_HTTP_PORT`).
 
 ## Volumes
-- Pas de volume défini par défaut (stateless). Ajouter un montage si vous stockez des presets/scripts.
+- Mono-instance : aucun volume (stateless).
+- Multi-tenant : `./data/shared/strudel` → `/workspace` pour stocker vos projets.
 
 ## Risques sécurité
-- Pas d'authentification native : placer derrière un reverse proxy avec auth si exposé.
-- Charger du code JS externe peut exécuter du code arbitraire côté serveur.
+- Interface sans authentification native.
+- Ressources statiques pouvant être modifiées si volume en écriture partagé.
 
 ## Configuration recommandée
-- Ajouter un pare-feu applicatif ou basic auth via reverse proxy.
-- Monter un volume pour gérer les compositions versionnées.
+- Laisser l’accès en local ou protéger via le reverse proxy (auth, HTTPS).
+- Pour un usage multi-utilisateur, séparer les volumes par tenant et limiter les droits d’écriture.
 
 ## Vérification rapide
 ```
-curl -fsS http://127.0.0.1:${STRUDEL_PORT:-7000}/
+docker compose -f compose/stack.yml ps strudel
+curl -I http://127.0.0.1:${STRUDEL_PORT:-7000}/
 ```

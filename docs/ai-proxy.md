@@ -1,26 +1,29 @@
 # AI Proxy
 
 ## Rôle
-Passerelle HTTP destinée à router les requêtes vers des services IA internes ou futurs (placeholder sûr par défaut).
+Serveur HTTP statique placeholder (nginx ou python simple serveur) pour servir des assets IA ou pages statiques.
 
 ## Dépendances
-- Réseaux `koff_net` et `ingress_net`.
+- Aucun service interne ; réseaux `koff_net` + `ingress_net`.
 
 ## Ports
-- 8081 (HTTP) – bind 127.0.0.1 par défaut.
+- 8081 (HTTP) lié à 127.0.0.1.
 
 ## Volumes
-- Aucun par défaut.
+- Mono-instance : `./data/shared/ai-proxy` → `/usr/share/nginx/html:ro`
+- Multi-tenant : même volume partagé (statique).
 
 ## Risques sécurité
-- Placeholder servant un simple serveur HTTP : ajouter authentification/tokens avant de brancher un modèle réel.
-- Ne pas exposer publiquement sans filtrage.
+- Aucun contrôle d’accès intégré ; fichiers servis en clair.
+- Si volume modifiable, risque de dépôt de contenu malveillant.
 
 ## Configuration recommandée
-- Remplacer l'image par votre proxy IA (par ex. FastAPI) et ajouter des ACL par tenant.
-- Mettre en place du rate limiting via le reverse proxy.
+- Conserver `read_only: true` (déjà activé) pour la racine web.
+- Placer un reverse proxy si exposition externe (TLS, auth basique).
+- Versionner uniquement des fichiers publics ; garder les assets sensibles hors repo.
 
 ## Vérification rapide
 ```
-curl -fsS http://127.0.0.1:${AI_PROXY_PORT:-8081}/
+docker compose -f compose/stack.yml ps ai-proxy
+curl -I http://127.0.0.1:${AI_PROXY_PORT:-8081}/
 ```

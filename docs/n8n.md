@@ -1,32 +1,36 @@
 # n8n
 
 ## Rôle
-Automatisation des workflows et orchestration d'intégrations internes.
+Automatisation de workflows (tenant azoth/maximus/koff ou mono-instance) avec stockage Postgres et cache Redis.
 
 ## Dépendances
-- PostgreSQL pour la base de données principale.
-- Redis pour la mise en cache et les files temporaires.
-- Accès réseau interne via `backbone_net` et `azoth_net`.
+- PostgreSQL (`postgres` ou `postgres-<tenant>`)
+- Redis (`redis` ou `redis-<tenant>`)
+- Qdrant/MinIO optionnels selon les workflows IA ou stockage objet.
+- Reverse proxy si exposition Internet.
 
 ## Ports
-- HTTP: 5678 (bound to 127.0.0.1 par défaut).
+- UI/API : `5678` (lié à 127.0.0.1 par défaut)
+- Webhooks : utiliser `N8N_WEBHOOK_URL` pour refléter l’URL publique si proxy.
 
 ## Volumes
-- `n8n_data` → `/home/node/.n8n`
+- Mono-instance : `n8n_data` → `/home/node/.n8n`
+- Multi-tenant : `./data/<tenant>/n8n` → `/home/node/.n8n`
 
 ## Risques sécurité
-- Exposition des webhooks si le reverse proxy est ouvert sur Internet.
-- Plugins et nodes communautaires peuvent introduire du code non maîtrisé.
-- Besoin d'une clé d'encryption (`N8N_ENCRYPTION_KEY`) pour protéger les credentials.
+- Exposition des webhooks et de l’UI sans authentification.
+- Stockage des credentials non chiffrés si `N8N_ENCRYPTION_KEY` absent.
+- Plugins communautaires potentiellement non audités.
 
 ## Configuration recommandée
-- Activer l'authentification basique (`N8N_BASIC_AUTH_*`).
-- Définir `N8N_SECURE_COOKIE=true` et forcer HTTPS via reverse proxy.
-- Désactiver la télémétrie et les diagnostics (`N8N_DIAGNOSTICS_ENABLED=false`).
-- Placer les webhooks derrière un proxy avec rate limiting (cf. reverse proxy Caddy/Nginx).
+- Activer l’auth basique (`N8N_BASIC_AUTH_ACTIVE=true`, variables utilisateur/mot de passe renseignées).
+- Définir `N8N_ENCRYPTION_KEY` et `N8N_SECURE_COOKIE=true`.
+- Désactiver télémétrie/diagnostic (`N8N_DIAGNOSTICS_ENABLED=false`).
+- Utiliser le reverse proxy pour HTTPS et rate-limit ; limiter l’ouverture réseau (ports liés à 127.0.0.1).
+- Monter `/tmp` en `tmpfs` (déjà configuré) pour limiter les écritures disque temporaires.
 
 ## Vérification rapide
 ```
-docker compose ps n8n
-curl -fsS http://127.0.0.1:${N8N_PORT:-5678}/healthz
+docker compose -f compose/stack.yml ps n8n
+curl -fsSL http://127.0.0.1:${N8N_PORT:-5678}/healthz
 ```
