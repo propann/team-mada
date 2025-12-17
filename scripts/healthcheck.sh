@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-COMPOSE_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/compose/docker-compose.yml"
+COMPOSE_FILE="${COMPOSE_FILE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/compose/stack.yml}"
 
 if ! docker compose -f "$COMPOSE_FILE" ps >/dev/null; then
   echo "Docker Compose ne répond pas." >&2

@@ -2,9 +2,18 @@
 .env
 .env.*
 !.env.example
+.envrc
+
+# Certificates & secrets
+configs/mqtt/certs/
+configs/reverse-proxy/*.pem
+configs/reverse-proxy/*.key
+configs/reverse-proxy/*.crt
+configs/reverse-proxy/acme.json
 
 # Logs and runtime artifacts
 logs/
+data/
 *.log
 *.tmp
 *.swp

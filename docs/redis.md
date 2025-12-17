@@ -1,27 +1,29 @@
 # Redis
 
 ## Rôle
-Cache en mémoire et file d'attente légère pour n8n.
+Cache et moteur de file d’attente Bull pour n8n.
 
 ## Dépendances
-- Volume `redis_data` pour la persistance AOF.
-- Réseau `backbone_net`.
+- Aucun service externe ; partage le réseau `backbone_net`.
 
 ## Ports
-- Aucun port publié (service interne uniquement).
+- 6379 interne ; lié sur `127.0.0.1` dans les stacks fournies (un port par tenant en multi-tenant).
 
 ## Volumes
-- `redis_data` → `/data`
+- Mono-instance : `redis_data` → `/data`
+- Multi-tenant : `./data/<tenant>/redis` si nécessaire (non créé par défaut pour limiter la persistance).
 
 ## Risques sécurité
-- Mot de passe vide par défaut : définir un secret fort via `requirepass` si vous ouvrez à d'autres services.
-- Ne pas exposer Redis sur Internet (pas de TLS intégré ici).
+- Accès sans mot de passe si `REDIS_PASSWORD` vide.
+- Exposition réseau publique permettant des attaques non authentifiées.
 
 ## Configuration recommandée
-- Garder le service interne. Si besoin, ajouter `masterauth` + TLS via image dédiée.
-- Ajuster `save`/`appendonly` selon la criticité des données.
+- Définir `REDIS_PASSWORD` dans `.env` ; le service applique `--requirepass` lorsqu’il est présent.
+- Garder le binding sur `127.0.0.1` et le réseau interne Docker.
+- Ajouter une politique d’expiration adaptée pour éviter le remplissage disque (selon usages Bull).
 
 ## Vérification rapide
 ```
-docker compose exec redis redis-cli ping
+docker compose -f compose/stack.yml ps redis
+docker compose -f compose/stack.yml exec redis redis-cli -a ${REDIS_PASSWORD:-} ping
 ```

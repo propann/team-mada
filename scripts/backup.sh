@@ -5,7 +5,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKUP_DIR="${POSTGRES_BACKUP_DIR:-$PROJECT_ROOT/backups/postgres}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 FILE="$BACKUP_DIR/postgres-$TIMESTAMP.sql.gz"
-COMPOSE_FILE="$PROJECT_ROOT/compose/docker-compose.yml"
+COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_ROOT/compose/stack.yml}"
 
 mkdir -p "$BACKUP_DIR"
 
