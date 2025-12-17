@@ -1,0 +1,9 @@
+.env
+.env.local
+*.log
+node_modules/
+backups/
+data/
+.cache/
+__pycache__/
+.DS_Store

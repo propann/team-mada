@@ -1,0 +1,304 @@
+version: "3.9"
+
+x-n8n-env: &n8n-env
+  GENERIC_TIMEZONE: Europe/Paris
+  N8N_BASIC_AUTH_ACTIVE: "true"
+  N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER}
+  N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
+  N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+  N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL}
+  EXECUTIONS_MODE: regular
+  QUEUE_BULL_REDIS_TLS: "false"
+
+x-n8n-common: &n8n-common
+  image: ${N8N_IMAGE}
+  env_file: .env
+  environment:
+    <<: *n8n-env
+  restart: unless-stopped
+  networks:
+    - internal
+
+x-postgres-common: &postgres-common
+  image: ${POSTGRES_IMAGE}
+  env_file: .env
+  environment:
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    POSTGRES_DB: ${POSTGRES_DB}
+  restart: unless-stopped
+  networks:
+    - internal
+
+x-redis-common: &redis-common
+  image: ${REDIS_IMAGE}
+  command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+  restart: unless-stopped
+  networks:
+    - internal
+
+x-qdrant-common: &qdrant-common
+  image: ${QDRANT_IMAGE}
+  restart: unless-stopped
+  networks:
+    - internal
+
+x-minio-common: &minio-common
+  image: ${MINIO_IMAGE}
+  command: ["server", "/data", "--console-address", ":9001"]
+  env_file: .env
+  restart: unless-stopped
+  networks:
+    - internal
+
+services:
+  # Tenant AZOTH
+  postgres-azoth:
+    <<: *postgres-common
+    volumes:
+      - ./data/azoth/postgres:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5402:5432"
+
+  redis-azoth:
+    <<: *redis-common
+    ports:
+      - "127.0.0.1:6371:6379"
+
+  qdrant-azoth:
+    <<: *qdrant-common
+    volumes:
+      - ./data/azoth/qdrant:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
+    ports:
+      - "127.0.0.1:6303:6333"
+
+  minio-azoth:
+    <<: *minio-common
+    volumes:
+      - ./data/azoth/minio:/data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+
+  n8n-azoth:
+    <<: *n8n-common
+    depends_on:
+      - postgres-azoth
+      - redis-azoth
+      - qdrant-azoth
+      - minio-azoth
+    environment:
+      <<: *n8n-env
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_HOST: postgres-azoth
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+      QUEUE_BULL_REDIS_HOST: redis-azoth
+      QUEUE_BULL_REDIS_PORT: 6379
+      QUEUE_BULL_REDIS_PASSWORD: ${REDIS_PASSWORD}
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
+      QDRANT_URL: http://qdrant-azoth:6333
+      MINIO_ENDPOINT: http://minio-azoth:9000
+      MINIO_BUCKET: azoth-bucket
+    volumes:
+      - ./data/azoth/n8n:/home/node/.n8n
+    ports:
+      - "127.0.0.1:5608:5678"
+
+  # Tenant MAXIMUS
+  postgres-maximus:
+    <<: *postgres-common
+    volumes:
+      - ./data/maximus/postgres:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5422:5432"
+
+  redis-maximus:
+    <<: *redis-common
+    ports:
+      - "127.0.0.1:6372:6379"
+
+  qdrant-maximus:
+    <<: *qdrant-common
+    volumes:
+      - ./data/maximus/qdrant:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
+    ports:
+      - "127.0.0.1:6323:6333"
+
+  minio-maximus:
+    <<: *minio-common
+    volumes:
+      - ./data/maximus/minio:/data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "127.0.0.1:9020:9000"
+      - "127.0.0.1:9021:9001"
+
+  n8n-maximus:
+    <<: *n8n-common
+    depends_on:
+      - postgres-maximus
+      - redis-maximus
+      - qdrant-maximus
+      - minio-maximus
+    environment:
+      <<: *n8n-env
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_HOST: postgres-maximus
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+      QUEUE_BULL_REDIS_HOST: redis-maximus
+      QUEUE_BULL_REDIS_PORT: 6379
+      QUEUE_BULL_REDIS_PASSWORD: ${REDIS_PASSWORD}
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
+      QDRANT_URL: http://qdrant-maximus:6333
+      MINIO_ENDPOINT: http://minio-maximus:9000
+      MINIO_BUCKET: maximus-bucket
+    volumes:
+      - ./data/maximus/n8n:/home/node/.n8n
+    ports:
+      - "127.0.0.1:5618:5678"
+
+  # Tenant KOFF
+  postgres-koff:
+    <<: *postgres-common
+    volumes:
+      - ./data/koff/postgres:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5442:5432"
+
+  redis-koff:
+    <<: *redis-common
+    ports:
+      - "127.0.0.1:6373:6379"
+
+  qdrant-koff:
+    <<: *qdrant-common
+    volumes:
+      - ./data/koff/qdrant:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
+    ports:
+      - "127.0.0.1:6333:6333"
+
+  minio-koff:
+    <<: *minio-common
+    volumes:
+      - ./data/koff/minio:/data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "127.0.0.1:9040:9000"
+      - "127.0.0.1:9041:9001"
+
+  n8n-koff:
+    <<: *n8n-common
+    depends_on:
+      - postgres-koff
+      - redis-koff
+      - qdrant-koff
+      - minio-koff
+    environment:
+      <<: *n8n-env
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_HOST: postgres-koff
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+      QUEUE_BULL_REDIS_HOST: redis-koff
+      QUEUE_BULL_REDIS_PORT: 6379
+      QUEUE_BULL_REDIS_PASSWORD: ${REDIS_PASSWORD}
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
+      QDRANT_URL: http://qdrant-koff:6333
+      MINIO_ENDPOINT: http://minio-koff:9000
+      MINIO_BUCKET: koff-bucket
+    volumes:
+      - ./data/koff/n8n:/home/node/.n8n
+    ports:
+      - "127.0.0.1:5628:5678"
+
+  # Shared services
+  mqtt:
+    image: ${MQTT_IMAGE}
+    restart: unless-stopped
+    volumes:
+      - ./data/shared/mqtt:/mosquitto/data
+      - ./data/shared/mqtt/config:/mosquitto/config
+    ports:
+      - "127.0.0.1:${MQTT_PORT:-1883}:1883"
+    networks:
+      - internal
+
+  prometheus:
+    image: ${PROMETHEUS_IMAGE}
+    restart: unless-stopped
+    volumes:
+      - ./data/shared/prometheus:/prometheus
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    networks:
+      - internal
+
+  grafana:
+    image: ${GRAFANA_IMAGE}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./data/shared/grafana:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: change-me
+    networks:
+      - internal
+
+  strudel:
+    image: ${STRUDEL_IMAGE}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${STRUDL_HTTP_PORT:-8080}:8080"
+    volumes:
+      - ./data/shared/strudel:/workspace
+    networks:
+      - internal
+
+  ai-proxy:
+    image: ${AI_PROXY_IMAGE}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${AI_PROXY_PORT:-8081}:80"
+    volumes:
+      - ./data/shared/ai-proxy:/usr/share/nginx/html:ro
+    networks:
+      - internal
+
+  embed-service:
+    image: ${EMBED_SERVICE_IMAGE}
+    command: ["python", "-m", "http.server", "8082"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${EMBED_SERVICE_PORT:-8082}:8082"
+    working_dir: /srv/app
+    volumes:
+      - ./data/shared/embed-service:/srv/app
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
