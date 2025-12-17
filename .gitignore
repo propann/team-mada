@@ -1,9 +1,43 @@
+# Environment
 .env
-.env.local
+.env.*
+!.env.example
+
+# Logs and runtime artifacts
+logs/
 *.log
-node_modules/
+*.tmp
+*.swp
+*.swo
+*.pid
+*.seed
+*.out
+*.err
+
+# Backups and dumps
 backups/
-data/
-.cache/
-__pycache__/
+*.sql
+*.sql.gz
+*.dump
+*.tar
+*.tar.gz
+*.tgz
+
+# Docker
+.docker/
+**/node_modules/
+**/dist/
+**/.DS_Store
+**/__pycache__/
+*.pyc
+.docker-compose.override.yml
+_rendered.compose.yml
+
+# Editor/IDE
+.vscode/
+.idea/
+*.iml
+
+# System
+Thumbs.db
 .DS_Store

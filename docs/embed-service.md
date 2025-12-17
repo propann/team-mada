@@ -1,10 +1,26 @@
-# Embed service – mini API vectorielle
+# Embed Service
 
-Service Python ultra-light qui expose une API statique (via `python -m http.server`). C’est plus un placeholder pour brancher votre vrai générateur d’embeddings.
+## Rôle
+Point de terminaison pour générer ou servir des embeddings (placeholder HTTP minimal prêt à être remplacé par un service réel).
 
-## Accès
-- `http://127.0.0.1:8082`
-- Déposez un `index.html` ou un petit script FastAPI dans `data/shared/embed-service/` si vous voulez quelque chose de plus sexy.
+## Dépendances
+- Réseaux `koff_net` et `ingress_net`.
 
-## Pourquoi si simple ?
-Parce qu’un bon squelette vaut mieux qu’une usine à gaz. Branchez votre modèle préféré quand vous êtes prêt.
+## Ports
+- 8082 (HTTP) – bind 127.0.0.1 par défaut.
+
+## Volumes
+- Aucun par défaut.
+
+## Risques sécurité
+- Pas d'authentification ni de limitation de charge dans la version placeholder.
+- Embeddings peuvent contenir des données sensibles si vous les générez à partir de contenu privé.
+
+## Configuration recommandée
+- Remplacer par votre implémentation (FastAPI/Go) avec auth et quotas.
+- Restreindre l'accès au réseau interne ou via reverse proxy authentifié.
+
+## Vérification rapide
+```
+curl -fsS http://127.0.0.1:${EMBED_SERVICE_PORT:-8082}/
+```

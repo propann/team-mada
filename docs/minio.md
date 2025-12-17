@@ -1,21 +1,29 @@
-# MinIO – les seaux organisés
+# MinIO
 
-Chaque tenant reçoit son instance MinIO, pour des buckets propres et secs.
+## Rôle
+Stockage objet compatible S3 pour sauvegardes, artefacts et échanges inter-services.
 
-## Accès
-- azoth : API `127.0.0.1:9000`, console `127.0.0.1:9001`
-- maximus : API `127.0.0.1:9020`, console `127.0.0.1:9021`
-- koff : API `127.0.0.1:9040`, console `127.0.0.1:9041`
-- Credentials : `.env` (`MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD`).
+## Dépendances
+- Volume `minio_data`.
+- Réseau `backbone_net`.
 
-## Bucket naming
-- Utilisez un bucket par tenant : `azoth-bucket`, `maximus-bucket`, `koff-bucket`.
-- Activez le versioning si vos workflows n8n manipulent des fichiers critiques.
+## Ports
+- 9000 (API) – bind 127.0.0.1 par défaut.
+- 9001 (console) – bind 127.0.0.1 par défaut.
 
-## Sauvegarde
-- `bash scripts/backup.sh volumes` crée une archive incluant les données MinIO.
-- Pour un dump ciblé : `mc mirror minio-azoth/<bucket> backups/minio/azoth/<bucket>`.
+## Volumes
+- `minio_data` → `/data`
 
-## Restauration rapide
-- `bash scripts/restore.sh volumes backups/minio-azoth-YYYYMMDD.tar.gz`
-- Ou `mc mirror backups/minio/... minio-azoth/<bucket>` si vous aimez les aller-retours.
+## Risques sécurité
+- Identifiants root nécessaires : ne jamais les versionner.
+- Console accessible : limiter à localhost ou protéger via reverse proxy.
+
+## Configuration recommandée
+- Remplir `MINIO_ROOT_USER` et `MINIO_ROOT_PASSWORD` via `.env`.
+- Créer des policies minimales par bucket.
+- Activer le chiffrage côté serveur (`sse`) si besoin via variables supplémentaires.
+
+## Vérification rapide
+```
+curl -fsS http://127.0.0.1:${MINIO_API_PORT:-9000}/minio/health/ready
+```

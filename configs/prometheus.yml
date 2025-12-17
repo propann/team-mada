@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["prometheus:9090"]
+
+  - job_name: node_exporters
+    static_configs:
+      - targets: []
+
+  - job_name: n8n
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["n8n:5678"]

@@ -1,0 +1,5 @@
+# Example ACL - replace placeholders via mosquitto_passwd
+user tenant_azoth
+topic readwrite azoth/#
+
+auth_opt_acl_cacheseconds 60

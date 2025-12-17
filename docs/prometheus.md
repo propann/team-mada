@@ -1,16 +1,27 @@
-# Prometheus – attrapeur de métriques
+# Prometheus
 
-Prometheus scrute vos services sur le réseau interne.
+## Rôle
+Collecte et stockage des métriques pour l'observabilité (Grafana).
 
-## Configuration
-- Port : `127.0.0.1:9090`
-- Fichier de config : `data/shared/prometheus/prometheus.yml` (copiez votre propre scrape_config si besoin).
+## Dépendances
+- Fichier de configuration `configs/prometheus.yml`.
+- Réseau `monitoring_net`.
 
-## Cibles de base
-- `http://grafana:3000/metrics`
-- `http://n8n-<tenant>:5678/metrics`
-- `http://qdrant-<tenant>:6333/metrics` (si activé)
+## Ports
+- 9090 (HTTP) – bind 127.0.0.1 par défaut.
 
-## Tips
-- Ajoutez `external_labels` pour identifier l’instance (utile si vous poussez vers Thanos).
-- Testez vos requêtes dans l’onglet **Graph** avant de les envoyer à Grafana. PromQL ne mord pas (sauf si vous tapez `rate()` sans intervalle...)
+## Volumes
+- `prometheus_data` → `/prometheus`
+
+## Risques sécurité
+- Accès non authentifié par défaut ; conserver l'accès sur localhost ou ajouter un reverse proxy avec auth.
+- Cibles de scraping mal protégées peuvent exposer des secrets via métriques.
+
+## Configuration recommandée
+- Ajouter des jobs de scraping pour vos exporters en restant sur les réseaux internes.
+- Activer `--web.enable-admin-api=false` si vous n'avez pas besoin de reloader à chaud (ici autorisé pour reloader via compose exec).
+
+## Vérification rapide
+```
+curl -fsS http://127.0.0.1:${PROMETHEUS_PORT:-9090}/-/healthy
+```

@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  caddy:
+    image: caddy:2.7-alpine
+    container_name: ${PROJECT_NAME}_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      EMAIL_LETSENCRYPT: ${EMAIL_LETSENCRYPT}
+    volumes:
+      - ./configs/reverse-proxy/Caddyfile.example:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - ingress_net
+      - backbone_net
+    depends_on:
+      - n8n
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  caddy_data:
+  caddy_config:

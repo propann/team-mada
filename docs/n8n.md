@@ -1,20 +1,32 @@
-# n8n – chef d’orchestre des workflows
+# n8n
 
-n8n pilote les automations par tenant. Chaque instance tourne sur son propre PostgreSQL/Redis pour éviter les accidents de cross-posting.
+## Rôle
+Automatisation des workflows et orchestration d'intégrations internes.
 
-## Connexion
-- URL locale : `http://127.0.0.1:5608` (azoth), `5618` (maximus), `5628` (koff).
-- Authentification : basic auth via `.env` (`N8N_BASIC_AUTH_USER` / `N8N_BASIC_AUTH_PASSWORD`).
+## Dépendances
+- PostgreSQL pour la base de données principale.
+- Redis pour la mise en cache et les files temporaires.
+- Accès réseau interne via `backbone_net` et `azoth_net`.
 
-## Secrets & bonnes pratiques
-- Renseignez `N8N_ENCRYPTION_KEY` (32 chars) avant le premier démarrage.
-- Ajoutez vos API keys via les credentials chiffrés n8n, jamais dans les nodes en clair.
-- Utilisez `Environment variables` pour injecter des URLs selon le tenant.
+## Ports
+- HTTP: 5678 (bound to 127.0.0.1 par défaut).
 
-## Petites astuces
-- Pour tester un webhook : `curl -X POST http://127.0.0.1:5608/webhook/test`. Oui, on ne juge pas vos payloads JSON.
-- Pensez à exporter vos workflows (`.json`) dans le dossier `backups/workflows/`.
+## Volumes
+- `n8n_data` → `/home/node/.n8n`
 
-## Supervision
-- Logs : `docker compose logs n8n-<tenant> -f`.
-- Santé Redis : `redis-cli -h redis-<tenant> -a $REDIS_PASSWORD ping` (depuis un conteneur utilitaire).
+## Risques sécurité
+- Exposition des webhooks si le reverse proxy est ouvert sur Internet.
+- Plugins et nodes communautaires peuvent introduire du code non maîtrisé.
+- Besoin d'une clé d'encryption (`N8N_ENCRYPTION_KEY`) pour protéger les credentials.
+
+## Configuration recommandée
+- Activer l'authentification basique (`N8N_BASIC_AUTH_*`).
+- Définir `N8N_SECURE_COOKIE=true` et forcer HTTPS via reverse proxy.
+- Désactiver la télémétrie et les diagnostics (`N8N_DIAGNOSTICS_ENABLED=false`).
+- Placer les webhooks derrière un proxy avec rate limiting (cf. reverse proxy Caddy/Nginx).
+
+## Vérification rapide
+```
+docker compose ps n8n
+curl -fsS http://127.0.0.1:${N8N_PORT:-5678}/healthz
+```

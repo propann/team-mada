@@ -1,24 +1,27 @@
-# Qdrant – gardien des vecteurs
+# Qdrant
 
-Chaque tenant dispose de son Qdrant, idéal pour stocker embeddings et recherches sémantiques.
+## Rôle
+Base vectorielle pour la recherche sémantique/IA.
 
-## Accès
-- azoth : `http://127.0.0.1:6303`
-- maximus : `http://127.0.0.1:6323`
-- koff : `http://127.0.0.1:6333`
-- Clé API : définie dans `.env` (`QDRANT_API_KEY`).
+## Dépendances
+- Volume `qdrant_data`.
+- Réseaux `koff_net` et `backbone_net`.
 
-## Bonnes pratiques
-- Créez une collection par cas d’usage ; évitez de mélanger les locataires.
-- Activez la réplication locale si vous prévoyez des requêtes lourdes.
-- Exportez vos collections avec `qdrant import/export` avant les mises à jour majeures.
+## Ports
+- 6333 (HTTP gRPC) – bind 127.0.0.1 par défaut.
 
-## Exemples
-```bash
-curl -X POST \ 
-  -H "api-key: $QDRANT_API_KEY" \ 
-  -H "Content-Type: application/json" \ 
-  -d '{"vectors": [0.1,0.2,0.3], "payload": {"who": "azoth"}}' \ 
-  http://127.0.0.1:6303/collections/demo/points
+## Volumes
+- `qdrant_data` → `/qdrant/storage`
+
+## Risques sécurité
+- API sans authentification par défaut : garder le service interne ou activer les `api-key` dans la configuration.
+- Données vectorielles sensibles (embeddings) : restreindre les exports.
+
+## Configuration recommandée
+- Ajouter une clé API via variable d'environnement `QDRANT__SERVICE__API_KEY` (non renseignée ici).
+- Utiliser TLS au niveau reverse proxy si exposé.
+
+## Vérification rapide
 ```
-Parce que les vecteurs aussi aiment avoir un badge nominatif.
+curl -fsS http://127.0.0.1:${QDRANT_PORT:-6333}/ready
+```

@@ -1,111 +1,112 @@
-# Az Stack – Déploiement multi-tenant clef en main
+# 🌐 Plateforme Docker modulaire (Debian) – n8n, monitoring, IA, MQTT, Strudel
 
-Bienvenue dans la reproduction nettoyée d’un export Docker (« az-stack-export.tar.gz »). Le dépôt fournit tout ce qu’il faut pour relancer la stack sur un Debian récent avec Docker Compose, sans données sensibles et avec une bonne dose de documentation.
+Dépôt de référence **sanitisé** pour déployer une stack modulaire sur VPS Debian. Aucun secret n'est versionné ; toutes les valeurs sensibles se configurent via `.env` (copie de `.env.example`).
 
-## 🎯 Objectifs
-- Offrir un **bundle Docker multi-tenant** (azoth, maximus, koff) couvrant automatisation (n8n), bases de données (PostgreSQL), cache/queue (Redis), vecteurs (Qdrant), stockage objet (MinIO), observabilité (Grafana/Prometheus), MQTT, Strudel, AI Proxy et service d’embed minimal.
-- Rester **reproductible** et **documenté** : `.env.example`, scripts utilitaires et guides pratiques.
-- Assurer que tout tourne en local via `docker compose` sur Debian, avec des ports bindés sur `127.0.0.1` et un guide optionnel de reverse-proxy.
-
-## 🧱 Architecture
+## 📁 Arborescence
 ```
-Client → (Reverse-proxy optionnel) → 127.0.0.1:PORTS
-                                    ├─ n8n-{tenant}        (5678)
-                                    ├─ postgres-{tenant}   (5432 internal)
-                                    ├─ redis-{tenant}      (6379 internal)
-                                    ├─ qdrant-{tenant}     (6333)
-                                    ├─ minio-{tenant}      (9000/9001)
-                                    ├─ mqtt                (1883)
-                                    ├─ grafana             (3000)
-                                    ├─ prometheus          (9090)
-                                    ├─ strudel             (8080)
-                                    ├─ ai-proxy            (8081)
-                                    └─ embed-service       (8082)
-```
-- **Isolation par tenant** : chaque locataire dispose de son trio PostgreSQL/Redis/n8n, d’instances Qdrant et MinIO séparées avec des volumes dédiés.
-- **Réseau interne unique** : les services exposent seulement ce qui est nécessaire en `127.0.0.1`. Exposez vers l’extérieur via reverse-proxy (cf. section dédiée) pour ajouter TLS/ACL.
-- **Extensions** : Grafana/Prometheus collectent les métriques locales, MQTT sert de bus léger, Strudel reste l’aire de jeu musicale.
-
-### Services et ports
-| Service | Ports (hôte) | Notes |
-| --- | --- | --- |
-| n8n-{tenant} | 127.0.0.1:56{tenant_idx}8 (ex. azoth → 5608) | Basic auth activable via `.env` |
-| postgres-{tenant} | 127.0.0.1:54{tenant_idx}2 | Utilisé uniquement en interne par défaut |
-| redis-{tenant} | interne | Protégé par mot de passe |
-| qdrant-{tenant} | 127.0.0.1:63{tenant_idx}3 | API key via `.env` |
-| minio-{tenant} (API/console) | 127.0.0.1:90{tenant_idx}0 / 90{tenant_idx}1 | Un bucket par tenant conseillé |
-| mqtt | 127.0.0.1:${MQTT_PORT:-1883} | Mosquitto |
-| grafana | 127.0.0.1:${GRAFANA_PORT:-3000} | Admin par défaut `admin/admin` à changer |
-| prometheus | 127.0.0.1:${PROMETHEUS_PORT:-9090} | Scrape des endpoints internes |
-| strudel | 127.0.0.1:${STRUDL_HTTP_PORT:-8080} | Serveur JS génératif |
-| ai-proxy | 127.0.0.1:${AI_PROXY_PORT:-8081} | Proxy HTTP basique (Nginx) |
-| embed-service | 127.0.0.1:${EMBED_SERVICE_PORT:-8082} | API d’embedding minimaliste |
-
-*(tenant_idx = 1 pour azoth, 2 pour maximus, 3 pour koff)*
-
-### Conventions de nommage
-- Services : `<service>-<tenant>` (sauf services partagés comme mqtt/grafana/prometheus/ai-proxy/embed-service).
-- Volumes : `<compose_project>_<service>-<tenant>_data` pour faciliter les sauvegardes.
-- Réseau Docker : `${COMPOSE_PROJECT_NAME}_internal`.
-- Dossiers hôte : `data/<tenant>/<service>`.
-
-## 🚀 Installation pas à pas (Debian)
-1. **Prérequis** : Docker + Docker Compose v2 installés, port 80/443 libres si reverse-proxy.
-2. **Cloner** : `git clone <ce dépôt>` puis `cp .env.example .env` et éditez les mots de passe.
-3. **Préparer les dossiers** : `bash scripts/bootstrap.sh` (crée `data/` et `backups/`, règle les permissions).
-4. **Lancer** : `docker compose up -d` (utilise `docker-compose.yml`).
-5. **Vérifier** : `bash scripts/healthcheck.sh` pour s’assurer que les endpoints répondent.
-
-## 🔁 Mise à jour & rollback
-- **Update images** : `docker compose pull && docker compose up -d`.
-- **Consigner la version** : `docker compose images > backups/compose-images-$(date +%F).txt`.
-- **Rollback rapide** : `docker compose down && docker compose -f _rendered.compose.yml up -d` (utilise le fichier rendu enregistré avant la mise à jour).
-- **Astuce** : Gardez une copie datée de `_rendered.compose.yml` après chaque déploiement stable.
-
-## 💾 Backup / Restore
-### Sauvegarde
-- PostgreSQL : `bash scripts/backup.sh postgres` → dumps compressés par tenant dans `backups/postgres/`.
-- Volumes MinIO/Qdrant/n8n : `bash scripts/backup.sh volumes` → archive tar.gz par tenant.
-- Fichier de composition : `cp docker-compose.yml _rendered.compose.yml` pour figer l’état.
-
-### Restauration
-- `bash scripts/restore.sh postgres <dumpfile>` pour restaurer un tenant précis.
-- `bash scripts/restore.sh volumes <archive.tar.gz>` pour remettre les volumes (arrête les services ciblés avant extraction).
-
-## 🔧 Troubleshooting
-- **Ports déjà utilisés** : ajustez les bindings dans `.env` ou via override compose.
-- **Services en boucle de restart** : `docker compose logs <service>` puis vérifiez les variables obligatoires.
-- **Droits fichier** : relancez `scripts/bootstrap.sh` (il applique `chmod 750` sur `data` et `backups`).
-- **n8n inaccessible** : vérifier `N8N_BASIC_AUTH_*` et l’URL `N8N_WEBHOOK_URL` (doit correspondre au reverse-proxy si activé).
-- **MinIO 403** : assurez-vous que les credentials sont identiques côté client et dans `.env` ; créez un bucket par tenant.
-
-## 🔐 Guide reverse-proxy (optionnel)
-- Positionnez un **Traefik** ou **Caddy** devant les ports exposés.
-- Limitez l’écoute à `127.0.0.1` côté services (déjà le cas) et publiez uniquement les hostnames voulus.
-- Activez **HTTPS** (Let’s Encrypt) et, si possible, un **SSO** (OIDC) pour Grafana/n8n.
-- Exemple Traefik minimal : points d’entrée `websecure`, middlewares `basicAuth` pour n8n, `rateLimit` pour l’AI proxy.
-
-## 📦 Arborescence
-```
-.
-├─ docker-compose.yml
-├─ _rendered.compose.yml
-├─ .env.example
-├─ scripts/
-│  ├─ bootstrap.sh
-│  ├─ backup.sh
-│  ├─ restore.sh
-│  └─ healthcheck.sh
-└─ docs/
-   ├─ n8n.md
-   ├─ mqtt.md
-   ├─ grafana.md
-   ├─ prometheus.md
-   ├─ qdrant.md
-   ├─ minio.md
-   ├─ strudel.md
-   ├─ ai-proxy.md
-   └─ embed-service.md
+compose/                 # Fichiers Docker Compose (stack & options reverse-proxy)
+configs/                 # Configs montées en read-only (MQTT, reverse proxy, Prometheus, Postgres init)
+docs/                    # Fiches service par service
+scripts/                 # Utilitaires (bootstrap, backup, restore, audit)
+backups/                 # Emplacement local des sauvegardes (git-ignoré)
+logs/                    # Journaux applicatifs (git-ignoré)
+.env.example             # Variables à renseigner avant déploiement
+.gitignore               # Ignore secrets/logs/dumps
 ```
 
-Bon déploiement !
+## 🏗️ Architecture globale
+Services principaux (tous optionnels sauf DB/cache pour n8n) :
+- **n8n** (automatisation) – réseaux `backbone_net`, `azoth_net`
+- **PostgreSQL** (DB) – réseaux `backbone_net`, `azoth_net`
+- **Redis** (cache) – réseau `backbone_net`
+- **Mosquitto** (MQTT) – réseau `backbone_net`
+- **Grafana + Prometheus** (monitoring) – réseau `monitoring_net`
+- **MinIO** (S3) – réseau `backbone_net`
+- **Qdrant** (vecteurs) – réseaux `backbone_net`, `koff_net`
+- **Strudel** (musique générative) – réseaux `maximus_net`, `ingress_net`
+- **AI proxy** (placeholder HTTP) – réseaux `koff_net`, `ingress_net`
+- **Embed service** (placeholder HTTP) – réseaux `koff_net`, `ingress_net`
+- **Reverse proxy Caddy** (optionnel) – réseau `ingress_net`
+
+### Diagramme ASCII
+```
+                     [ Internet ]
+                          |
+                   (optionnel Caddy)
+                          |
+                      ingress_net
+                    /     |      \
+               strudel  ai-proxy  embed-service
+                   |         \        /
+                maximus_net   koff_net
+                          \    /
+                       backbone_net
+      azoth_net ---- n8n ---- postgres
+            \          \       /
+             \          redis  /
+              \         mosquitto
+               \             |
+                \         minio
+                 \        /
+                 monitoring_net
+                /             \
+         prometheus        grafana
+```
+
+## 🚀 Installation rapide (Debian + Docker Compose)
+1. **Prérequis** : Docker Engine + Docker Compose v2 installés, ports 80/443 libres si reverse proxy.
+2. **Cloner** : `git clone https://github.com/<TON_USER>/team-mada && cd team-mada`
+3. **Bootstrap** : `./scripts/bootstrap.sh` (crée `.env`, dossiers, vérifie les binaires).
+4. **Configurer** : éditer `.env` (mots de passe DB, MinIO, ports, domaines éventuels).
+5. **Démarrer** : `docker compose -f compose/docker-compose.yml up -d`.
+6. **Option Internet** : `ENABLE_REVERSE_PROXY=true` puis `docker compose -f compose/docker-compose.yml -f compose/reverse-proxy.caddy.yml up -d` pour exposer via Caddy/HTTPS.
+
+## ▶️ Utilisation quotidienne
+- **Démarrer** : `docker compose -f compose/docker-compose.yml up -d`
+- **Arrêter** : `docker compose -f compose/docker-compose.yml down`
+- **Logs** : `docker compose -f compose/docker-compose.yml logs -f n8n`
+- **Mise à jour** : `docker compose pull && docker compose -f compose/docker-compose.yml up -d`
+- **Rollback** : recharger une sauvegarde Postgres via `./scripts/restore.sh <dump.sql.gz>` + relecture des configs versionnées.
+
+## 💾 Sauvegarde & restauration
+- **Sauvegarde Postgres** : `./scripts/backup.sh` (dumps compressés dans `backups/postgres/`).
+- **Restauration** : `./scripts/restore.sh backups/postgres/<fichier>.sql.gz` (stack démarrée pour réappliquer le dump).
+- **Configs** : toute la configuration applicative est versionnée dans `configs/` (sans secrets). Exportez vos dashboards Grafana au format JSON.
+
+## 🔐 Baseline sécurité (par défaut)
+- `restart: unless-stopped` sur tous les services.
+- Ports bindés sur `127.0.0.1` pour éviter l'exposition Internet accidentelle.
+- Réseaux isolés par tenant logique : `azoth`, `maximus`, `koff`, plus `monitoring` et `ingress`.
+- `no-new-privileges` + `cap_drop` (là où compatible) ; utilisateurs non-root lorsque possible.
+- Bases/queues non publiées (Postgres, Redis, Qdrant) ; MQTT avec ACL et TLS optionnel.
+- Reverse proxy optionnel (Caddy) pour ajouter TLS/Let’s Encrypt et basic auth.
+
+### Modes d’exposition
+- **LAN only (par défaut)** : garder les ports sur `127.0.0.1`, ne pas lancer le reverse proxy. Accès via SSH tunnel ou VPN.
+- **Mode Internet** : activer le reverse proxy, fournir `PUBLIC_DOMAIN` + `EMAIL_LETSENCRYPT`, ajouter authentification sur Grafana/n8n/Strudel, ouvrir uniquement 80/443 dans le firewall.
+
+### Checklist système
+- **UFW/iptables** : autoriser `22/tcp`, `80/443` (si proxy), sinon uniquement les ports SSH/VPN. Bloquer `1883/8883` depuis l’extérieur sauf besoin explicite.
+- **fail2ban** : activer les jails SSH + nginx/caddy si exposé.
+- **SSH hardening** : clés publiques uniquement, `PermitRootLogin no`, `PasswordAuthentication no`, port non standard optionnel.
+- **Rotation** : planifier `./scripts/backup.sh` (cron/systemd timer), vérifier l’espace disque des volumes Docker.
+
+### MQTT : ACL & TLS
+- Utilisateurs à créer via `mosquitto_passwd` (fichier `configs/mqtt/passwords`).
+- ACL par tenant (`configs/mqtt/acl`) pour éviter les fuites cross-tenant.
+- Templates TLS (auto-signé) décrits dans `docs/mqtt.md` ; ne jamais committer les clés privées.
+
+## 🛡️ Hardening service par service
+Voir `/docs` pour les fiches détaillées : n8n, Postgres, Redis, MQTT, Grafana, Prometheus, Qdrant, MinIO, Strudel, AI Proxy, Embed Service.
+
+## 🔍 Troubleshooting
+- **Containers ne démarrent pas** : `docker compose -f compose/docker-compose.yml logs --tail 50 <service>`.
+- **Port déjà utilisé** : ajuster les valeurs dans `.env` (ex: `N8N_PORT=5680`).
+- **TLS MQTT** : vérifier la présence des certs dans `configs/mqtt/certs/` et les permissions (lectures). 
+- **Reverse proxy** : recharger Caddy `docker compose -f compose/reverse-proxy.caddy.yml exec caddy caddy reload --config /etc/caddy/Caddyfile`.
+- **Audit rapide** : `./scripts/security-audit.sh` (ports exposés, cap_drop, variables sensibles restantes).
+
+## 🧭 Ressources complémentaires
+- Templates de configurations supplémentaires dans `configs/`.
+- Fiches service dans `docs/` avec risques, ports et checks rapides.
+

@@ -1,29 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Load env (prefer .env, fall back to example)
-if [[ -f .env ]]; then
-  set -a; source .env; set +a
-elif [[ -f .env.example ]]; then
-  set -a; source .env.example; set +a
-else
-  echo "No .env or .env.example found" >&2
-  exit 1
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_FILE="$PROJECT_ROOT/.env"
+
+command -v docker >/dev/null 2>&1 || { echo "Docker manquant"; exit 1; }
+command -v docker compose >/dev/null 2>&1 || { echo "Docker Compose v2 manquant"; exit 1; }
+
+mkdir -p "$PROJECT_ROOT/backups/postgres" "$PROJECT_ROOT/logs" "$PROJECT_ROOT/configs/mqtt/certs"
+
+if [[ ! -f "$ENV_FILE" ]]; then
+  cp "$PROJECT_ROOT/.env.example" "$ENV_FILE"
+  echo "Fichier .env créé depuis .env.example. Pensez à le personnaliser."
 fi
 
-DATA_ROOT=${DATA_ROOT:-./data}
-BACKUP_ROOT=${BACKUP_ROOT:-./backups}
-TENANTS_LIST=${TENANTS:-"azoth maximus koff"}
+chown "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}" "$PROJECT_ROOT/backups" "$PROJECT_ROOT/logs" 2>/dev/null || true
+chmod 750 "$PROJECT_ROOT/backups" "$PROJECT_ROOT/logs"
 
-mkdir -p "$BACKUP_ROOT"/postgres "$BACKUP_ROOT"/volumes "$BACKUP_ROOT"/workflows "$BACKUP_ROOT"/grafana
-mkdir -p "$DATA_ROOT"/shared/{mqtt,ai-proxy,prometheus,grafana,embed-service,strudel}
-
-for tenant in $TENANTS_LIST; do
-  mkdir -p "$DATA_ROOT/$tenant"/{n8n,postgres,qdrant,minio}
-  # Redis keeps its data in memory, folder mostly for future dumps/configs
-  mkdir -p "$DATA_ROOT/$tenant/redis"
-  echo "Prepared directories for tenant: $tenant"
-done
-
-chmod -R 750 "$DATA_ROOT" "$BACKUP_ROOT"
-echo "Bootstrap complete. You can now run: docker compose up -d"
+echo "Bootstrap terminé. Lancez 'docker compose -f compose/docker-compose.yml up -d'."

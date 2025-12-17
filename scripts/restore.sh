@@ -1,44 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-MODE=${1:-}
-TARGET=${2:-}
-FILE=${3:-}
-
-if [[ -z "$MODE" ]]; then
-  echo "Usage: $0 <postgres tenant dump.sql.gz | volumes archive.tar.gz>" >&2
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $0 <fichier_sql_gz>" >&2
   exit 1
 fi
 
-if [[ -f .env ]]; then set -a; source .env; set +a; else set -a; source .env.example; set +a; fi
-DATA_ROOT=${DATA_ROOT:-./data}
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+COMPOSE_FILE="$PROJECT_ROOT/compose/docker-compose.yml"
+BACKUP_FILE="$1"
 
-case "$MODE" in
-  postgres)
-    if [[ -z "$TARGET" || -z "$FILE" ]]; then
-      echo "Usage: $0 postgres <tenant> <dump.sql.gz>" >&2
-      exit 1
-    fi
-    echo "Restoring postgres for $TARGET from $FILE"
-    gunzip -c "$FILE" | docker compose exec -T "postgres-$TARGET" psql -U "$POSTGRES_USER"
-    ;;
-  volumes)
-    ARCHIVE=${TARGET}
-    if [[ ! -f "$ARCHIVE" ]]; then
-      echo "Archive not found: $ARCHIVE" >&2
-      exit 1
-    fi
-    echo "Stopping services before restore..."
-    docker compose down
-    echo "Restoring volumes from $ARCHIVE"
-    tar -xzf "$ARCHIVE" -C ./
-    echo "Restarting services"
-    docker compose up -d
-    ;;
-  *)
-    echo "Unknown mode: $MODE" >&2
-    exit 1
-    ;;
+if [[ ! -f "$BACKUP_FILE" ]]; then
+  echo "Fichier introuvable: $BACKUP_FILE" >&2
+  exit 1
 fi
 
-echo "Restore completed ($MODE)."
+gunzip -c "$BACKUP_FILE" | docker compose -f "$COMPOSE_FILE" exec -T postgres psql -U "${POSTGRES_USER:-postgres}" postgres
+
+echo "Restauration effectuée depuis $BACKUP_FILE"
