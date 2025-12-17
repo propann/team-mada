@@ -1,0 +1,21 @@
+{
+  auto_https off
+}
+
+:80 {
+  log
+  encode zstd gzip
+  respond "/healthz" 200
+  reverse_proxy n8n:5678 {
+    header_up Host {host}
+  }
+}
+
+${PUBLIC_DOMAIN}:443 {
+  encode zstd gzip
+  tls {
+    issuer acme
+    email ${EMAIL_LETSENCRYPT}
+  }
+  reverse_proxy n8n:5678
+}

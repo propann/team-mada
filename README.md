@@ -1,151 +1,112 @@
-# 🌐 Projet VPS – Plateforme Modulaire d’Automatisation & Création  
-*Un atelier numérique pour apprendre, automatiser et expérimenter.*
+# 🌐 Plateforme Docker modulaire (Debian) – n8n, monitoring, IA, MQTT, Strudel
 
----
+Dépôt de référence **sanitisé** pour déployer une stack modulaire sur VPS Debian. Aucun secret n'est versionné ; toutes les valeurs sensibles se configurent via `.env` (copie de `.env.example`).
 
-## 🎯 Objectif du Projet
+## 📁 Arborescence
+```
+compose/                 # Fichiers Docker Compose (stack & options reverse-proxy)
+configs/                 # Configs montées en read-only (MQTT, reverse proxy, Prometheus, Postgres init)
+docs/                    # Fiches service par service
+scripts/                 # Utilitaires (bootstrap, backup, restore, audit)
+backups/                 # Emplacement local des sauvegardes (git-ignoré)
+logs/                    # Journaux applicatifs (git-ignoré)
+.env.example             # Variables à renseigner avant déploiement
+.gitignore               # Ignore secrets/logs/dumps
+```
 
-Ce dépôt documente la mise en place d'une plateforme technique sur VPS permettant :
+## 🏗️ Architecture globale
+Services principaux (tous optionnels sauf DB/cache pour n8n) :
+- **n8n** (automatisation) – réseaux `backbone_net`, `azoth_net`
+- **PostgreSQL** (DB) – réseaux `backbone_net`, `azoth_net`
+- **Redis** (cache) – réseau `backbone_net`
+- **Mosquitto** (MQTT) – réseau `backbone_net`
+- **Grafana + Prometheus** (monitoring) – réseau `monitoring_net`
+- **MinIO** (S3) – réseau `backbone_net`
+- **Qdrant** (vecteurs) – réseaux `backbone_net`, `koff_net`
+- **Strudel** (musique générative) – réseaux `maximus_net`, `ingress_net`
+- **AI proxy** (placeholder HTTP) – réseaux `koff_net`, `ingress_net`
+- **Embed service** (placeholder HTTP) – réseaux `koff_net`, `ingress_net`
+- **Reverse proxy Caddy** (optionnel) – réseau `ingress_net`
 
-- d’installer **n8n** pour créer et exécuter des workflows automatisés,  
-- de visualiser des données techniques via **Grafana**,  
-- de stocker ces données dans **InfluxDB**,  
-- d’héberger **Strudel** pour explorer la musique générative en JavaScript,  
-- de servir de base d’apprentissage : Docker, JS, automatisation, monitoring, bonnes pratiques.
+### Diagramme ASCII
+```
+                     [ Internet ]
+                          |
+                   (optionnel Caddy)
+                          |
+                      ingress_net
+                    /     |      \
+               strudel  ai-proxy  embed-service
+                   |         \        /
+                maximus_net   koff_net
+                          \    /
+                       backbone_net
+      azoth_net ---- n8n ---- postgres
+            \          \       /
+             \          redis  /
+              \         mosquitto
+               \             |
+                \         minio
+                 \        /
+                 monitoring_net
+                /             \
+         prometheus        grafana
+```
 
-Le projet doit rester **reproductible**, **pédagogique**, et **ne contenir aucune information sensible**.
+## 🚀 Installation rapide (Debian + Docker Compose)
+1. **Prérequis** : Docker Engine + Docker Compose v2 installés, ports 80/443 libres si reverse proxy.
+2. **Cloner** : `git clone https://github.com/<TON_USER>/team-mada && cd team-mada`
+3. **Bootstrap** : `./scripts/bootstrap.sh` (crée `.env`, dossiers, vérifie les binaires).
+4. **Configurer** : éditer `.env` (mots de passe DB, MinIO, ports, domaines éventuels).
+5. **Démarrer** : `docker compose -f compose/docker-compose.yml up -d`.
+6. **Option Internet** : `ENABLE_REVERSE_PROXY=true` puis `docker compose -f compose/docker-compose.yml -f compose/reverse-proxy.caddy.yml up -d` pour exposer via Caddy/HTTPS.
 
----
+## ▶️ Utilisation quotidienne
+- **Démarrer** : `docker compose -f compose/docker-compose.yml up -d`
+- **Arrêter** : `docker compose -f compose/docker-compose.yml down`
+- **Logs** : `docker compose -f compose/docker-compose.yml logs -f n8n`
+- **Mise à jour** : `docker compose pull && docker compose -f compose/docker-compose.yml up -d`
+- **Rollback** : recharger une sauvegarde Postgres via `./scripts/restore.sh <dump.sql.gz>` + relecture des configs versionnées.
 
-## 🏗️ Architecture du Projet
+## 💾 Sauvegarde & restauration
+- **Sauvegarde Postgres** : `./scripts/backup.sh` (dumps compressés dans `backups/postgres/`).
+- **Restauration** : `./scripts/restore.sh backups/postgres/<fichier>.sql.gz` (stack démarrée pour réappliquer le dump).
+- **Configs** : toute la configuration applicative est versionnée dans `configs/` (sans secrets). Exportez vos dashboards Grafana au format JSON.
 
-┌─────────────────────────────────────────────────────────┐
-│ VPS │
-├─────────────────────────────────────────────────────────┤
-│ Debian / Docker │
-│ ├── n8n → Automatisation & workflows │
-│ ├── InfluxDB → Stockage d'événements │
-│ ├── Grafana → Tableaux de bord │
-│ ├── Strudel Server → Audio JS / musique générative │
-│ ├── Portainer → Gestion Docker │
-│ └── Services internes (logs, monitoring) │
-Chaque module est isolé, simple à maintenir, et pensé pour évoluer.
+## 🔐 Baseline sécurité (par défaut)
+- `restart: unless-stopped` sur tous les services.
+- Ports bindés sur `127.0.0.1` pour éviter l'exposition Internet accidentelle.
+- Réseaux isolés par tenant logique : `azoth`, `maximus`, `koff`, plus `monitoring` et `ingress`.
+- `no-new-privileges` + `cap_drop` (là où compatible) ; utilisateurs non-root lorsque possible.
+- Bases/queues non publiées (Postgres, Redis, Qdrant) ; MQTT avec ACL et TLS optionnel.
+- Reverse proxy optionnel (Caddy) pour ajouter TLS/Let’s Encrypt et basic auth.
 
----
+### Modes d’exposition
+- **LAN only (par défaut)** : garder les ports sur `127.0.0.1`, ne pas lancer le reverse proxy. Accès via SSH tunnel ou VPN.
+- **Mode Internet** : activer le reverse proxy, fournir `PUBLIC_DOMAIN` + `EMAIL_LETSENCRYPT`, ajouter authentification sur Grafana/n8n/Strudel, ouvrir uniquement 80/443 dans le firewall.
 
-## 🔧 Services Inclus
+### Checklist système
+- **UFW/iptables** : autoriser `22/tcp`, `80/443` (si proxy), sinon uniquement les ports SSH/VPN. Bloquer `1883/8883` depuis l’extérieur sauf besoin explicite.
+- **fail2ban** : activer les jails SSH + nginx/caddy si exposé.
+- **SSH hardening** : clés publiques uniquement, `PermitRootLogin no`, `PasswordAuthentication no`, port non standard optionnel.
+- **Rotation** : planifier `./scripts/backup.sh` (cron/systemd timer), vérifier l’espace disque des volumes Docker.
 
-### **1. Docker & Portainer**
-Base de l’infrastructure.  
-Permet de déployer et gérer facilement les conteneurs.
+### MQTT : ACL & TLS
+- Utilisateurs à créer via `mosquitto_passwd` (fichier `configs/mqtt/passwords`).
+- ACL par tenant (`configs/mqtt/acl`) pour éviter les fuites cross-tenant.
+- Templates TLS (auto-signé) décrits dans `docs/mqtt.md` ; ne jamais committer les clés privées.
 
----
+## 🛡️ Hardening service par service
+Voir `/docs` pour les fiches détaillées : n8n, Postgres, Redis, MQTT, Grafana, Prometheus, Qdrant, MinIO, Strudel, AI Proxy, Embed Service.
 
-### **2. n8n – Automatisation accessible**
-Utilisé pour :
+## 🔍 Troubleshooting
+- **Containers ne démarrent pas** : `docker compose -f compose/docker-compose.yml logs --tail 50 <service>`.
+- **Port déjà utilisé** : ajuster les valeurs dans `.env` (ex: `N8N_PORT=5680`).
+- **TLS MQTT** : vérifier la présence des certs dans `configs/mqtt/certs/` et les permissions (lectures). 
+- **Reverse proxy** : recharger Caddy `docker compose -f compose/reverse-proxy.caddy.yml exec caddy caddy reload --config /etc/caddy/Caddyfile`.
+- **Audit rapide** : `./scripts/security-audit.sh` (ports exposés, cap_drop, variables sensibles restantes).
 
-- créer des workflows pédagogiques,  
-- apprendre les API, webhooks, logique d'automatisation,  
-- orchestrer des tâches internes,  
-- construire un environnement formateur pour les débutants comme pour les créateurs.
-
-Aucune donnée privée n'est intégrée dans les workflows.
-
----
-
-### **3. Grafana – Vision globale du système**
-Serve pour :
-
-- analyser performances et comportements du VPS,  
-- interpréter les données stockées dans InfluxDB,  
-- visualiser l’activité des workflows.
-
-Dashboards exportables et reproductibles.
-
----
-
-### **4. InfluxDB – Stockage temporel**
-Base utilisée pour des données **techniques anonymes**, comme :
-
-- logs,  
-- métriques système,  
-- événements pédagogiques émis par n8n.
-
----
-
-### **5. Strudel – Serveur de musique générative JS**
-Espace créatif pour apprendre :
-
-- JavaScript,  
-- logique musicale,  
-- génération algorithmique,  
-- intégration possible avec n8n.
-
-Documentation fournie dans `/docs/strudel/`.
-
----
-
-## 📚 Documentation Prévue
-
-Ce dépôt inclut une structure claire pour documenter l’installation, l’usage et la maintenance :
-
-
-└─────────────────────────────────────────────────────────┘/docs
-├─ install/ → guides d’installation pas-à-pas
-├─ n8n/ → workflows, nodes, tutoriels
-├─ grafana/ → dashboards & guides
-├─ influxdb/ → schémas & bonnes pratiques
-├─ strudel/ → scripts & tutoriels JS audio
-├─ security/ → bonnes pratiques de sécurité VPS
-└─ contribution.md → comment contribuer proprement
-Chaque guide est pensé pour être **clair**, **reproductible**, et **sans données sensibles**.
-
----
-
-## 🛠️ Mise en Place (Overview)
-
-Les étapes détaillées sont disponibles dans `/docs/install/`.
-
-1. Installer Docker  
-2. Installer Portainer  
-3. Déployer les services avec `docker-compose`  
-4. Configurer n8n  
-5. Configurer Grafana  
-6. Configurer InfluxDB  
-7. Installer Strudel  
-8. Sécuriser le VPS  
-9. Mettre en place les sauvegardes et les mises à jour
-
----
-
-## 🤝 Philosophie
-
-> *« Ce serveur n’est pas une tour d’ivoire.  
-> C’est une forge où workflows, données et musique  
-> deviennent les outils d’un futur que l’on construit à la main. »*
-
-Le but : apprendre, documenter, transmettre.  
-Créer une plateforme solide, propre, évolutive.
-
----
-
-## 🚀 Feuille de Route
-
-- Ajout de templates de workflows n8n  
-- Scripts Strudel de démonstration  
-- Documentation JS pour débutants  
-- Exemples d’utilisation d’API publiques  
-- Guide “Découverte de Docker”  
-- Création d’un mini-site d’accueil pour la documentation
-
----
-
-## 📜 Licence
-
-Projet documentaire et éducatif.  
-Libre d’adaptation, utilisation et distribution tant que les bonnes pratiques de sécurité sont respectées.
-
-
-
-
+## 🧭 Ressources complémentaires
+- Templates de configurations supplémentaires dans `configs/`.
+- Fiches service dans `docs/` avec risques, ports et checks rapides.
 
