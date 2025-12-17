@@ -1,0 +1,455 @@
+services:
+  # ───────────── POSTGRES N8N ─────────────
+  postgres-azoth:
+    image: postgres:16
+    container_name: az-postgres-azoth
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_AZOTH_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_AZOTH_PASS}
+      POSTGRES_DB: ${POSTGRES_AZOTH_DB}
+    volumes:
+      - postgres_azoth_data:/var/lib/postgresql/data
+    networks: [az-backend]
+
+  postgres-maximus:
+    image: postgres:16
+    container_name: az-postgres-maximus
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_MAXIMUS_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_MAXIMUS_PASS}
+      POSTGRES_DB: ${POSTGRES_MAXIMUS_DB}
+    volumes:
+      - postgres_maximus_data:/var/lib/postgresql/data
+    networks: [az-backend]
+
+  postgres-koff:
+    image: postgres:16
+    container_name: az-postgres-koff
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_KOFF_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_KOFF_PASS}
+      POSTGRES_DB: ${POSTGRES_KOFF_DB}
+    volumes:
+      - postgres_koff_data:/var/lib/postgresql/data
+    networks: [az-backend]
+
+  # ───────────── QDRANT (1 PAR INSTANCE) ─────────────
+  qdrant-azoth:
+    image: qdrant/qdrant:latest
+    container_name: az-qdrant-azoth
+    restart: unless-stopped
+    ports: ["127.0.0.1:6333:6333"] # debug local seulement (optionnel)
+    volumes:
+      - qdrant_azoth_storage:/qdrant/storage
+    networks: [az-backend]
+
+  qdrant-maximus:
+    image: qdrant/qdrant:latest
+    container_name: az-qdrant-maximus
+    restart: unless-stopped
+    ports: ["127.0.0.1:6334:6333"] # debug local seulement (optionnel)
+    volumes:
+      - qdrant_maximus_storage:/qdrant/storage
+    networks: [az-backend]
+
+  qdrant-koff:
+    image: qdrant/qdrant:latest
+    container_name: az-qdrant-koff
+    restart: unless-stopped
+    ports: ["127.0.0.1:6335:6333"] # debug local seulement (optionnel)
+    volumes:
+      - qdrant_koff_storage:/qdrant/storage
+    networks: [az-backend]
+
+  # ───────────── REDIS (1 PAR INSTANCE) ─────────────
+  redis-azoth:
+    image: redis:7-alpine
+    container_name: az-redis-azoth
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["127.0.0.1:6379:6379"] # debug local seulement (optionnel)
+    volumes:
+      - redis_azoth_data:/data
+    networks: [az-backend]
+
+  redis-maximus:
+    image: redis:7-alpine
+    container_name: az-redis-maximus
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["127.0.0.1:6380:6379"] # debug local seulement (optionnel)
+    volumes:
+      - redis_maximus_data:/data
+    networks: [az-backend]
+
+  redis-koff:
+    image: redis:7-alpine
+    container_name: az-redis-koff
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["127.0.0.1:6381:6379"] # debug local seulement (optionnel)
+    volumes:
+      - redis_koff_data:/data
+    networks: [az-backend]
+
+  # ───────────── MINIO (1 PAR INSTANCE) ─────────────
+  # NOTE: mqtt utilise déjà 9001 -> on décale uniquement la console Azoth sur 9101
+  minio-azoth:
+    image: minio/minio:latest
+    container_name: az-minio-azoth
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_AZOTH_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_AZOTH_PASS}
+    ports:
+      - "127.0.0.1:9000:9000" # API
+      - "127.0.0.1:9101:9001" # Console
+    volumes:
+      - minio_azoth_data:/data
+    networks: [az-backend]
+
+  minio-maximus:
+    image: minio/minio:latest
+    container_name: az-minio-maximus
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_MAXIMUS_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_MAXIMUS_PASS}
+    ports:
+      - "127.0.0.1:9002:9000" # API
+      - "127.0.0.1:9003:9001" # Console
+    volumes:
+      - minio_maximus_data:/data
+    networks: [az-backend]
+
+  minio-koff:
+    image: minio/minio:latest
+    container_name: az-minio-koff
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_KOFF_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_KOFF_PASS}
+    ports:
+      - "127.0.0.1:9004:9000" # API
+      - "127.0.0.1:9005:9001" # Console
+    volumes:
+      - minio_koff_data:/data
+    networks: [az-backend]
+
+  # ───────────── EMBEDDINGS (1 PAR INSTANCE) ─────────────
+  embed-azoth:
+    build: ./embed-service
+    container_name: az-embed-azoth
+    restart: unless-stopped
+    environment:
+      EMBED_MODEL: BAAI/bge-base-en-v1.5
+    networks: [az-backend]
+
+  embed-maximus:
+    build: ./embed-service
+    container_name: az-embed-maximus
+    restart: unless-stopped
+    environment:
+      EMBED_MODEL: BAAI/bge-base-en-v1.5
+    networks: [az-backend]
+
+  embed-koff:
+    build: ./embed-service
+    container_name: az-embed-koff
+    restart: unless-stopped
+    environment:
+      EMBED_MODEL: BAAI/bge-base-en-v1.5
+    networks: [az-backend]
+
+  # ───────────── N8N INSTANCES ─────────────
+  n8n-azoth:
+    image: n8nio/n8n:latest
+    container_name: az-n8n-azoth
+    restart: unless-stopped
+    depends_on: [postgres-azoth, qdrant-azoth, redis-azoth, minio-azoth, embed-azoth]
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres-azoth
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_AZOTH_DB}
+      DB_POSTGRESDB_USER: ${POSTGRES_AZOTH_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_AZOTH_PASS}
+
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: ${N8N_AZOTH_USER}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_AZOTH_PASS}
+      GENERIC_TIMEZONE: "Europe/Paris"
+      N8N_ENCRYPTION_KEY: ${N8N_AZOTH_KEY}
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+
+      # future-proof
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_GIT_NODE_DISABLE_BARE_REPOS: "true"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+
+      # ─── IA MEMORY LINKS ───
+      QDRANT_URL: http://az-qdrant-azoth:6333
+      REDIS_URL: redis://az-redis-azoth:6379
+      EMBED_URL: http://az-embed-azoth:8080
+
+      # ─── OBJECT STORAGE ───
+      MINIO_ENDPOINT: http://az-minio-azoth:9000
+      MINIO_ACCESS_KEY: ${MINIO_AZOTH_USER}
+      MINIO_SECRET_KEY: ${MINIO_AZOTH_PASS}
+      MINIO_BUCKET: azoth
+    ports: ["127.0.0.1:5678:5678"]
+    volumes:
+      - n8n_azoth_data:/home/node/.n8n
+    networks: [az-backend]
+
+  n8n-maximus:
+    image: n8nio/n8n:latest
+    container_name: az-n8n-maximus
+    restart: unless-stopped
+    depends_on: [postgres-maximus, qdrant-maximus, redis-maximus, minio-maximus, embed-maximus]
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres-maximus
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_MAXIMUS_DB}
+      DB_POSTGRESDB_USER: ${POSTGRES_MAXIMUS_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_MAXIMUS_PASS}
+
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: ${N8N_MAXIMUS_USER}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_MAXIMUS_PASS}
+      GENERIC_TIMEZONE: "Europe/Paris"
+      N8N_ENCRYPTION_KEY: ${N8N_MAXIMUS_KEY}
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+
+      # future-proof
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_GIT_NODE_DISABLE_BARE_REPOS: "true"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+
+      QDRANT_URL: http://az-qdrant-maximus:6333
+      REDIS_URL: redis://az-redis-maximus:6379
+      EMBED_URL: http://az-embed-maximus:8080
+
+      MINIO_ENDPOINT: http://az-minio-maximus:9000
+      MINIO_ACCESS_KEY: ${MINIO_MAXIMUS_USER}
+      MINIO_SECRET_KEY: ${MINIO_MAXIMUS_PASS}
+      MINIO_BUCKET: maximus
+    ports: ["127.0.0.1:5679:5678"]
+    volumes:
+      - n8n_maximus_data:/home/node/.n8n
+    networks: [az-backend]
+
+  n8n-koff:
+    image: n8nio/n8n:latest
+    container_name: az-n8n-koff
+    restart: unless-stopped
+    depends_on: [postgres-koff, qdrant-koff, redis-koff, minio-koff, embed-koff]
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres-koff
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_KOFF_DB}
+      DB_POSTGRESDB_USER: ${POSTGRES_KOFF_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_KOFF_PASS}
+
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: ${N8N_KOFF_USER}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_KOFF_PASS}
+      GENERIC_TIMEZONE: "Europe/Paris"
+      N8N_ENCRYPTION_KEY: ${N8N_KOFF_KEY}
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+
+      # future-proof
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_GIT_NODE_DISABLE_BARE_REPOS: "true"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+
+      QDRANT_URL: http://az-qdrant-koff:6333
+      REDIS_URL: redis://az-redis-koff:6379
+      EMBED_URL: http://az-embed-koff:8080
+
+      MINIO_ENDPOINT: http://az-minio-koff:9000
+      MINIO_ACCESS_KEY: ${MINIO_KOFF_USER}
+      MINIO_SECRET_KEY: ${MINIO_KOFF_PASS}
+      MINIO_BUCKET: koff
+    ports: ["127.0.0.1:5680:5678"]
+    volumes:
+      - n8n_koff_data:/home/node/.n8n
+    networks: [az-backend]
+
+  # ───────────── PGADMIN ─────────────
+  drant:
+    image: dpage/pgadmin4:latest
+    container_name: az-drant
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASS}
+    ports: ["127.0.0.1:5050:80"]
+    volumes:
+      - drant_data:/var/lib/pgadmin
+    networks: [az-backend]
+
+  # ───────────── GRAFANA ─────────────
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: az-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASS}
+    ports: ["127.0.0.1:3000:3000"]
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks: [az-backend]
+
+  # ───────────── AI PROXY (GROQ) ─────────────
+  ai-proxy:
+    image: node:20-alpine
+    container_name: az-ai-proxy
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./ai-proxy:/app
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY}
+    command: sh -lc "npm i && node server.js"
+    ports: ["127.0.0.1:3101:3101"]
+    networks: [az-backend]
+
+  # ───────────── STRUDEL ─────────────
+  strudel:
+    build: ./strudel
+    container_name: az-strudel
+    restart: unless-stopped
+    ports: ["127.0.0.1:4321:4321"]
+    networks: [az-backend]
+
+  # ───────────── ROCKET.CHAT + MONGO ─────────────
+  chat-mongo:
+    image: mongo:7
+    container_name: az-chat-mongo
+    restart: unless-stopped
+    volumes:
+      - chat_mongo_data:/data/db
+    networks: [az-backend]
+
+  chat:
+    image: rocketchat/rocket.chat:latest
+    container_name: az-chat
+    restart: unless-stopped
+    depends_on: [chat-mongo]
+    environment:
+      MONGO_URL: mongodb://chat-mongo:27017/rocketchat
+      ROOT_URL: http://localhost:3001
+      PORT: 3001
+    ports: ["127.0.0.1:3001:3001"]
+    networks: [az-backend]
+
+  # ───────────── PORTAINER ─────────────
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: az-portainer
+    restart: unless-stopped
+    ports: ["127.0.0.1:9443:9443"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks: [az-backend]
+
+  # ───────────── MQTT (MOSQUITTO) ─────────────
+  mqtt:
+    image: eclipse-mosquitto:latest
+    container_name: az-mqtt
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1883:1883"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks: [az-backend]
+
+  # ───────────── CADVISOR (CONTAINERS METRICS) ─────────────
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: az-cadvisor
+    restart: unless-stopped
+    ports: ["127.0.0.1:8080:8080"]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks: [az-backend]
+
+  # ───────────── NODE EXPORTER (HOST METRICS) ─────────────
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: az-node-exporter
+    restart: unless-stopped
+    ports: ["127.0.0.1:9100:9100"]
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+    networks: [az-backend]
+
+  # ───────────── PROMETHEUS ─────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: az-prometheus
+    restart: unless-stopped
+    ports: ["127.0.0.1:9090:9090"]
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    networks: [az-backend]
+
+networks:
+  az-backend:
+
+volumes:
+  postgres_azoth_data:
+  postgres_maximus_data:
+  postgres_koff_data:
+
+  n8n_azoth_data:
+  n8n_maximus_data:
+  n8n_koff_data:
+
+  drant_data:
+  grafana_data:
+
+  # qdrant (3 volumes)
+  qdrant_azoth_storage:
+  qdrant_maximus_storage:
+  qdrant_koff_storage:
+
+  # redis (3 volumes)
+  redis_azoth_data:
+  redis_maximus_data:
+  redis_koff_data:
+
+  # minio (3 volumes)
+  minio_azoth_data:
+  minio_maximus_data:
+  minio_koff_data:
+
+  chat_mongo_data:
+  portainer_data:
+  prometheus_data:
