@@ -1,0 +1,30 @@
+NAME                  IMAGE                             COMMAND                  SERVICE            CREATED          STATUS                    PORTS
+az-ai-proxy           node:20-alpine                    "docker-entrypoint.s…"   ai-proxy           54 minutes ago   Up 54 minutes             127.0.0.1:3101->3101/tcp
+az-cadvisor           gcr.io/cadvisor/cadvisor:latest   "/usr/bin/cadvisor -…"   cadvisor           54 minutes ago   Up 54 minutes (healthy)   127.0.0.1:8080->8080/tcp
+az-chat               rocketchat/rocket.chat:latest     "docker-entrypoint.s…"   chat               54 minutes ago   Up 54 minutes             3000/tcp, 127.0.0.1:3001->3001/tcp
+az-chat-mongo         mongo:7                           "docker-entrypoint.s…"   chat-mongo         54 minutes ago   Up 54 minutes             27017/tcp
+az-drant              dpage/pgadmin4:latest             "/entrypoint.sh"         drant              54 minutes ago   Up 54 minutes             443/tcp, 127.0.0.1:5050->80/tcp
+az-embed-azoth        az-stack-embed-azoth              "uvicorn main:app --…"   embed-azoth        54 minutes ago   Up 54 minutes             8080/tcp
+az-embed-koff         az-stack-embed-koff               "uvicorn main:app --…"   embed-koff         54 minutes ago   Up 54 minutes             8080/tcp
+az-embed-maximus      az-stack-embed-maximus            "uvicorn main:app --…"   embed-maximus      54 minutes ago   Up 54 minutes             8080/tcp
+az-grafana            grafana/grafana-oss:latest        "/run.sh"                grafana            54 minutes ago   Up 54 minutes             127.0.0.1:3000->3000/tcp
+az-minio-azoth        minio/minio:latest                "/usr/bin/docker-ent…"   minio-azoth        54 minutes ago   Up 54 minutes             127.0.0.1:9000->9000/tcp, 127.0.0.1:9101->9001/tcp
+az-minio-koff         minio/minio:latest                "/usr/bin/docker-ent…"   minio-koff         54 minutes ago   Up 54 minutes             127.0.0.1:9004->9000/tcp, 127.0.0.1:9005->9001/tcp
+az-minio-maximus      minio/minio:latest                "/usr/bin/docker-ent…"   minio-maximus      54 minutes ago   Up 54 minutes             127.0.0.1:9002->9000/tcp, 127.0.0.1:9003->9001/tcp
+az-mqtt               eclipse-mosquitto:latest          "/docker-entrypoint.…"   mqtt               54 minutes ago   Up 54 minutes             127.0.0.1:1883->1883/tcp, 127.0.0.1:9001->9001/tcp
+az-n8n-azoth          n8nio/n8n:latest                  "tini -- /docker-ent…"   n8n-azoth          54 minutes ago   Up 54 minutes             127.0.0.1:5678->5678/tcp
+az-n8n-koff           n8nio/n8n:latest                  "tini -- /docker-ent…"   n8n-koff           54 minutes ago   Up 54 minutes             127.0.0.1:5680->5678/tcp
+az-n8n-maximus        n8nio/n8n:latest                  "tini -- /docker-ent…"   n8n-maximus        54 minutes ago   Up 54 minutes             127.0.0.1:5679->5678/tcp
+az-node-exporter      prom/node-exporter:latest         "/bin/node_exporter …"   node-exporter      54 minutes ago   Up 54 minutes             127.0.0.1:9100->9100/tcp
+az-portainer          portainer/portainer-ce:latest     "/portainer"             portainer          54 minutes ago   Up 54 minutes             8000/tcp, 9000/tcp, 127.0.0.1:9443->9443/tcp
+az-postgres-azoth     postgres:16                       "docker-entrypoint.s…"   postgres-azoth     54 minutes ago   Up 54 minutes             5432/tcp
+az-postgres-koff      postgres:16                       "docker-entrypoint.s…"   postgres-koff      54 minutes ago   Up 54 minutes             5432/tcp
+az-postgres-maximus   postgres:16                       "docker-entrypoint.s…"   postgres-maximus   54 minutes ago   Up 54 minutes             5432/tcp
+az-prometheus         prom/prometheus:latest            "/bin/prometheus --c…"   prometheus         54 minutes ago   Up 54 minutes             127.0.0.1:9090->9090/tcp
+az-qdrant-azoth       qdrant/qdrant:latest              "./entrypoint.sh"        qdrant-azoth       54 minutes ago   Up 54 minutes             127.0.0.1:6333->6333/tcp, 6334/tcp
+az-qdrant-koff        qdrant/qdrant:latest              "./entrypoint.sh"        qdrant-koff        54 minutes ago   Up 54 minutes             6334/tcp, 127.0.0.1:6335->6333/tcp
+az-qdrant-maximus     qdrant/qdrant:latest              "./entrypoint.sh"        qdrant-maximus     54 minutes ago   Up 54 minutes             6334/tcp, 127.0.0.1:6334->6333/tcp
+az-redis-azoth        redis:7-alpine                    "docker-entrypoint.s…"   redis-azoth        54 minutes ago   Up 54 minutes             127.0.0.1:6379->6379/tcp
+az-redis-koff         redis:7-alpine                    "docker-entrypoint.s…"   redis-koff         54 minutes ago   Up 54 minutes             127.0.0.1:6381->6379/tcp
+az-redis-maximus      redis:7-alpine                    "docker-entrypoint.s…"   redis-maximus      54 minutes ago   Up 54 minutes             127.0.0.1:6380->6379/tcp
+az-strudel            az-stack-strudel                  "docker-entrypoint.s…"   strudel            54 minutes ago   Up 54 minutes             127.0.0.1:4321->4321/tcp
