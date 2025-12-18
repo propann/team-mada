@@ -1,0 +1,44 @@
+name: security-gates
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          args: detect --source . --no-banner --redact
+
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install deps (ai-proxy)
+        working-directory: ai-proxy
+        run: npm ci --ignore-scripts
+      - name: npm audit
+        working-directory: ai-proxy
+        run: npm audit --audit-level=high
+
+  repo-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for committed .env files
+        run: |
+          if git ls-files --error-unmatch "**/.env"; then
+            echo "Error: .env file committed. Remove it before merging." >&2
+            exit 1
+          fi
+          echo "No .env files tracked."

@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 .envrc
+.secrets/
+secrets/
+*.env.local
 
 # Certificates & secrets
 configs/mqtt/certs/
@@ -10,6 +13,11 @@ configs/reverse-proxy/*.pem
 configs/reverse-proxy/*.key
 configs/reverse-proxy/*.crt
 configs/reverse-proxy/acme.json
+*.pem
+*.key
+*.crt
+*.pfx
+*.kubeconfig
 
 # Logs and runtime artifacts
 logs/
@@ -41,6 +49,10 @@ backups/
 *.pyc
 .docker-compose.override.yml
 _rendered.compose.yml
+gitleaks-report.json
+
+# Security audit artifacts
+*.sarif
 
 # Editor/IDE
 .vscode/

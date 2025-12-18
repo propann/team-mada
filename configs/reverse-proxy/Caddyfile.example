@@ -1,21 +1,57 @@
 {
-  auto_https off
+  email ${EMAIL_LETSENCRYPT}
 }
 
 :80 {
   log
   encode zstd gzip
-  respond "/healthz" 200
-  reverse_proxy n8n:5678 {
-    header_up Host {host}
-  }
+  respond /healthz 200
+  redir https://{host}{uri} permanent
 }
 
 ${PUBLIC_DOMAIN}:443 {
   encode zstd gzip
+  log
   tls {
     issuer acme
     email ${EMAIL_LETSENCRYPT}
   }
-  reverse_proxy n8n:5678
+
+  rate_limit {
+    zone n8n-public {
+      key {remote.ip}
+      events 60
+      window 1m
+      burst 20
+    }
+  }
+
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    Content-Security-Policy "default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "no-referrer"
+    Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+  }
+
+  @blocked {
+    path /.git* /env* /backup* /admin* /metrics* /debug* /phpmyadmin* /hidden* /private*
+  }
+  respond @blocked 403
+
+  request_body {
+    max_size 20MB
+  }
+
+  handle_path /healthz {
+    respond 200
+  }
+
+  route {
+    rate_limit {
+      zone n8n-public
+    }
+    reverse_proxy n8n:5678
+  }
 }
