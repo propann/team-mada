@@ -19,6 +19,10 @@ x-n8n-common: &n8n-common
   user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
   tmpfs:
     - /tmp
+  cap_drop:
+    - ALL
+  pids_limit: 300
+  mem_limit: 1g
   security_opt:
     - no-new-privileges:true
   networks:
@@ -33,6 +37,10 @@ x-postgres-common: &postgres-common
     POSTGRES_DB: ${POSTGRES_DB}
   restart: unless-stopped
   user: "999:999"
+  cap_drop:
+    - ALL
+  pids_limit: 200
+  mem_limit: 1g
   security_opt:
     - no-new-privileges:true
   networks:
@@ -45,6 +53,8 @@ x-redis-common: &redis-common
   user: "999:999"
   cap_drop:
     - ALL
+  pids_limit: 150
+  mem_limit: 512m
   security_opt:
     - no-new-privileges:true
   networks:
@@ -53,6 +63,10 @@ x-redis-common: &redis-common
 x-qdrant-common: &qdrant-common
   image: ${QDRANT_IMAGE}
   restart: unless-stopped
+  cap_drop:
+    - ALL
+  pids_limit: 200
+  mem_limit: 1g
   security_opt:
     - no-new-privileges:true
   networks:
@@ -63,6 +77,10 @@ x-minio-common: &minio-common
   command: ["server", "/data", "--console-address", ":9001"]
   env_file: .env
   restart: unless-stopped
+  cap_drop:
+    - ALL
+  pids_limit: 200
+  mem_limit: 1g
   security_opt:
     - no-new-privileges:true
   networks:
@@ -253,6 +271,10 @@ services:
   mqtt:
     image: ${MQTT_IMAGE}
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    pids_limit: 100
+    mem_limit: 256m
     volumes:
       - ./data/shared/mqtt:/mosquitto/data
       - ./data/shared/mqtt/config:/mosquitto/config
@@ -266,6 +288,10 @@ services:
   prometheus:
     image: ${PROMETHEUS_IMAGE}
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    pids_limit: 200
+    mem_limit: 1g
     volumes:
       - ./data/shared/prometheus:/prometheus
     ports:
@@ -278,6 +304,10 @@ services:
   grafana:
     image: ${GRAFANA_IMAGE}
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    pids_limit: 200
+    mem_limit: 512m
     ports:
       - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
     volumes:
@@ -293,6 +323,10 @@ services:
   strudel:
     image: ${STRUDEL_IMAGE}
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    pids_limit: 200
+    mem_limit: 512m
     ports:
       - "127.0.0.1:${STRUDL_HTTP_PORT:-8080}:8080"
     volumes:
@@ -305,6 +339,10 @@ services:
   ai-proxy:
     image: ${AI_PROXY_IMAGE}
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    pids_limit: 100
+    mem_limit: 256m
     ports:
       - "127.0.0.1:${AI_PROXY_PORT:-8081}:80"
     volumes:
@@ -319,6 +357,10 @@ services:
     image: ${EMBED_SERVICE_IMAGE}
     command: ["python", "-m", "http.server", "8082"]
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    pids_limit: 100
+    mem_limit: 256m
     ports:
       - "127.0.0.1:${EMBED_SERVICE_PORT:-8082}:8082"
     working_dir: /srv/app

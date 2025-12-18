@@ -14,6 +14,10 @@ services:
     container_name: ${PROJECT_NAME}_postgres
     <<: *restart_policy
     user: "999:999"
+    cap_drop:
+      - ALL
+    pids_limit: 200
+    mem_limit: 1g
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -39,6 +43,8 @@ services:
     container_name: ${PROJECT_NAME}_redis
     <<: *restart_policy
     user: "999:999"
+    pids_limit: 150
+    mem_limit: 512m
     command: ["sh", "-c", "if [ -n \"${REDIS_PASSWORD}\" ]; then exec redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}; else exec redis-server --appendonly yes; fi"]
     volumes:
       - redis_data:/data:Z
@@ -60,6 +66,10 @@ services:
     container_name: ${PROJECT_NAME}_mosquitto
     <<: *restart_policy
     user: "1883:1883"
+    cap_drop:
+      - ALL
+    pids_limit: 100
+    mem_limit: 256m
     ports:
       - "127.0.0.1:${MOSQUITTO_PORT:-1883}:1883"
       - "127.0.0.1:${MQTT_TLS_PORT:-8883}:8883"
@@ -85,6 +95,8 @@ services:
     container_name: ${PROJECT_NAME}_n8n
     <<: *restart_policy
     user: "${LOCAL_UID}:${LOCAL_GID}"
+    pids_limit: 300
+    mem_limit: 1g
     ports:
       - "127.0.0.1:${N8N_PORT:-5678}:5678"
     environment:
@@ -129,6 +141,8 @@ services:
     container_name: ${PROJECT_NAME}_grafana
     <<: *restart_policy
     user: "472"
+    pids_limit: 200
+    mem_limit: 512m
     ports:
       - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
     environment:
@@ -152,6 +166,10 @@ services:
     image: prom/prometheus:v2.52.0
     container_name: ${PROJECT_NAME}_prometheus
     <<: *restart_policy
+    cap_drop:
+      - ALL
+    pids_limit: 200
+    mem_limit: 1g
     ports:
       - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--web.enable-lifecycle"]
@@ -168,6 +186,10 @@ services:
     image: qdrant/qdrant:v1.8.5
     container_name: ${PROJECT_NAME}_qdrant
     <<: *restart_policy
+    cap_drop:
+      - ALL
+    pids_limit: 200
+    mem_limit: 1g
     ports:
       - "127.0.0.1:${QDRANT_PORT:-6333}:6333"
     volumes:
@@ -184,6 +206,10 @@ services:
     container_name: ${PROJECT_NAME}_minio
     <<: *restart_policy
     command: server /data --console-address ":9001"
+    cap_drop:
+      - ALL
+    pids_limit: 200
+    mem_limit: 1g
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
@@ -204,9 +230,13 @@ services:
       - no-new-privileges:true
 
   strudel:
-    image: ghcr.io/strudel-cc/strudel:latest
+    image: ${STRUDEL_IMAGE:-ghcr.io/strudel-cc/strudel:0.10.0}
     container_name: ${PROJECT_NAME}_strudel
     <<: *restart_policy
+    cap_drop:
+      - ALL
+    pids_limit: 200
+    mem_limit: 512m
     ports:
       - "127.0.0.1:${STRUDEL_PORT:-7000}:7000"
     environment:
@@ -226,6 +256,10 @@ services:
     ports:
       - "127.0.0.1:${AI_PROXY_PORT:-8081}:8081"
     read_only: true
+    cap_drop:
+      - ALL
+    pids_limit: 100
+    mem_limit: 256m
     networks:
       - koff_net
       - ingress_net
@@ -241,6 +275,10 @@ services:
     ports:
       - "127.0.0.1:${EMBED_SERVICE_PORT:-8082}:8082"
     read_only: true
+    cap_drop:
+      - ALL
+    pids_limit: 100
+    mem_limit: 256m
     networks:
       - koff_net
       - ingress_net
