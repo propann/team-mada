@@ -18,6 +18,7 @@ logs/                    # Journaux applicatifs (git-ignoré)
 - **Stack par défaut** : `compose/stack.yml` (réseaux isolés par domaine fonctionnel, ports liés à 127.0.0.1).
 - **Variante multi-tenant** : `compose/multi-tenant.yml` (services dupliqués azoth / maximus / koff + services partagés).
 - **Reverse proxy optionnel** : `compose/reverse-proxy.caddy.yml` pour exposer via HTTPS sans secrets versionnés.
+- **Jeu web** : `apps/jeux-text` (terminal narratif servi en interne, exposé via `/jeux-text/`).
 
 ### Diagramme ASCII (stack par défaut)
 ```
@@ -91,7 +92,7 @@ logs/                    # Journaux applicatifs (git-ignoré)
 - TLS optionnel : déposer `ca.crt`, `server.crt`, `server.key` dans `configs/mqtt/certs/` (non versionnés). Génération possible via `openssl` (cf. `docs/mqtt.md`).
 
 ## Documentation détaillée
-Les fiches `/docs/*.md` couvrent : n8n, postgres, redis, mqtt, grafana, prometheus, qdrant, minio, strudel, ai-proxy, embed-service. Chaque fiche décrit rôle, dépendances, ports, volumes, risques, configuration recommandée et vérification rapide.
+Les fiches `/docs/*.md` couvrent : n8n, postgres, redis, mqtt, grafana, prometheus, qdrant, minio, strudel, ai-proxy, embed-service, jeux-text. Chaque fiche décrit rôle, dépendances, ports, volumes, risques, configuration recommandée et vérification rapide.
 
 ## Troubleshooting
 - **Containers ne démarrent pas** : `docker compose -f <stack> logs --tail 50 <service>`.

@@ -1,0 +1,11 @@
+{
+  "name": "jeux-text",
+  "version": "1.0.0",
+  "description": "Jeu texte minimal en mode terminal pour TEAM-MADA",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}
