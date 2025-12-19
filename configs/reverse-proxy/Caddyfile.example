@@ -48,6 +48,10 @@ ${PUBLIC_DOMAIN}:443 {
     respond 200
   }
 
+  handle_path /jeux-text/* {
+    reverse_proxy jeux-text:8080
+  }
+
   route {
     rate_limit {
       zone n8n-public

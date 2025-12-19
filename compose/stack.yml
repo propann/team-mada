@@ -249,12 +249,15 @@ services:
       - no-new-privileges:true
 
   ai-proxy:
-    image: python:3.11-alpine
+    image: ${AI_PROXY_IMAGE:-python:3.11-alpine}
     container_name: ${PROJECT_NAME}_ai_proxy
     <<: *restart_policy
+    working_dir: /srv/site
     command: ["sh", "-c", "python -m http.server 8081"]
     ports:
       - "127.0.0.1:${AI_PROXY_PORT:-8081}:8081"
+    volumes:
+      - ../apps/site:/srv/site:ro
     read_only: true
     cap_drop:
       - ALL
@@ -263,6 +266,27 @@ services:
     networks:
       - koff_net
       - ingress_net
+    logging: *default_logging
+    security_opt:
+      - no-new-privileges:true
+
+  jeux-text:
+    build:
+      context: ../apps/jeux-text
+      dockerfile: Dockerfile
+    image: ${PROJECT_NAME}_jeux-text
+    container_name: ${PROJECT_NAME}_jeux_text
+    <<: *restart_policy
+    read_only: true
+    expose:
+      - "8080"
+    networks:
+      - ingress_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     logging: *default_logging
     security_opt:
       - no-new-privileges:true

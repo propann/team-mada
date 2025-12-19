@@ -8,7 +8,7 @@ if ! docker compose -f "$COMPOSE_FILE" ps >/dev/null; then
   exit 1
 fi
 
-services=(postgres redis mosquitto n8n grafana prometheus qdrant minio strudel ai-proxy embed-service)
+services=(postgres redis mosquitto n8n grafana prometheus qdrant minio strudel ai-proxy jeux-text embed-service)
 for svc in "${services[@]}"; do
   if docker compose -f "$COMPOSE_FILE" ps --status running "$svc" | grep -q "$svc"; then
     echo "[OK] $svc en cours d'exécution"

@@ -1,0 +1,27 @@
+{
+  "intro": {
+    "title": "Réveil",
+    "description": "Tu ouvres les yeux. Les néons clignotent dans un bunker abandonné. Une radio grésille, parle d'une zone sûre quelque part. Un couloir sombre mène vers l'Est.",
+    "options": [
+      { "target": "couloir", "label": "go couloir - S'enfoncer dans le couloir" }
+    ],
+    "items": ["lampe de poche"]
+  },
+  "couloir": {
+    "title": "Couloir",
+    "description": "Le couloir est long, tapissé de câbles arrachés. Un grésillement électrique éclaire par intermittence. Au bout, une échelle mène vers un abri scellé.",
+    "options": [
+      { "target": "intro", "label": "go retour - Revenir vers le sas" },
+      { "target": "abri", "label": "go abri - Descendre l'échelle" }
+    ],
+    "items": ["pile usée"]
+  },
+  "abri": {
+    "title": "Abri improvisé",
+    "description": "Tu atteins une pièce circulaire. Des cartes griffonnées décrivent une zone sûre. Une trappe mène plus bas, mais l'air est lourd. Tu peux te reposer ici.",
+    "options": [
+      { "target": "couloir", "label": "go couloir - Remonter" }
+    ],
+    "items": ["ration sèche"]
+  }
+}

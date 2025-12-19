@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JEUX-TEXT</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="terminal">
+    <header class="terminal__header">
+      <div class="lights">
+        <span class="light red"></span>
+        <span class="light yellow"></span>
+        <span class="light green"></span>
+      </div>
+      <div class="title">JEUX-TEXT // terminal narratif</div>
+    </header>
+    <main class="terminal__body">
+      <div id="output" class="terminal__output" aria-live="polite"></div>
+      <form id="command-form" class="terminal__input" autocomplete="off">
+        <label for="command">$</label>
+        <input id="command" name="command" type="text" placeholder="help, start, look, go abri" autofocus />
+      </form>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
